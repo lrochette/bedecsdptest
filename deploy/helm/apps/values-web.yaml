@@ -4,14 +4,14 @@ app:
 
 container:
   imageName: bede-devopsdashboard-web
-  port: 8000
+  port: 80
 
 service:
-  port: 8000
-  targetPort: 8000
+  port: 80
+  targetPort: 80
 
 ingress:
-  hostname: some-host
+  hostname: dashboard
 
 cache:
   enabled: "false"
