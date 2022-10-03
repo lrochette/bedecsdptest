@@ -1,0 +1,32 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  {{- include "dashboard-application.metadata" . | nindent 2 }}
+  annotations:
+    kubernetes.io/tls-acme: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: {{default "/$1" .Values.ingress.rewriteTarget }}
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header l5d-dst-override $service_name.$namespace.svc.cluster.local:$service_port;
+    nginx.ingress.kubernetes.io/ssl-redirect: {{ .Values.ingress.sslRedirectEnabled | default "false" | quote }}
+    nginx.ingress.kubernetes.io/enable-cors: {{ default "false" .Values.ingress.enableCors | quote }}
+    {{ if .Values.ingress.proxyBodySize -}}
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ .Values.ingress.proxyBodySize | quote }}
+    {{- end }}
+spec:
+  tls:
+  - hosts:
+    - {{ include "dashboard-application.ingressTlsHost" . }}
+    secretName: {{ include "dashboard-application.ingressTlsSecret" . }}
+  rules:
+    - host: {{ include "dashboard-application.ingressHost" . }}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/(.*)"
+            backend:
+              service:
+                name: {{ include "bede-application.ingressTargetService.name" . }}
+                port: 
+                  number: {{ include "bede-application.ingressTargetService.port" . }}
+{{- end }}
