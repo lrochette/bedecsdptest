@@ -19,8 +19,7 @@ ingress:
   sslRedirectEnabled: false
   enableCors: "true"
 
-secretName: "slack-token"
-  # "some-secret"
+secretName: "some-secret"
 
 tolerateSpot: "true"
 spotEnabled: "true"
