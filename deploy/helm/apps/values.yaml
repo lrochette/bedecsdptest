@@ -1,0 +1,26 @@
+app:
+  maintainer: some-name
+  slackChannel: some-channel
+  repository: "https://github.com/andrewmetcalfbede/csdptest"
+
+container:
+  repository: some.repo
+  pullPolicy: Always
+
+deployment: {}
+
+service:
+  enabled: true
+  name: http
+  protocol: TCP
+
+ingress:
+  enabled: true
+  sslRedirectEnabled: false
+  enableCors: "true"
+
+secretName: "slack-token"
+  # "some-secret"
+
+tolerateSpot: "true"
+spotEnabled: "true"
