@@ -1,0 +1,95 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  {{- include "dashboard-application.metadata" . | nindent 2 }}
+spec:
+  revisionHistoryLimit: 0
+  {{- if .Values.minReadySeconds }}
+  minReadySeconds: {{ .Values.minReadySeconds }}
+  {{- end }}
+  {{- if .Values.replicaCount }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "dashboard-application.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.deployment.annotations -}}
+        {{- .Values.deployment.annotations | toYaml | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "dashboard-application.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.deployment.nodeSelector }}
+      nodeSelector: {{- .Values.deployment.nodeSelector | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      containers:
+      - name: {{ include "dashboard-application.name" . }}
+        image: {{ include "dashboard-application.image" . }}
+        env:
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secretName }}
+              key: db.user
+              optional: false
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secretName }}
+              key: db.password
+              optional: false
+        - name: DB_NAME
+          value: {{ .Values.db.name }}
+        - name: DB_HOST
+          value: {{ .Values.db.host }}
+        {{- if .Values.container.resources }}
+        resources:
+          requests:
+            {{- .Values.container.resources.requests | toYaml | nindent 12 }}
+          {{- if .Values.container.resources.limits }}  
+          limits:
+          {{- if .Values.container.resources.limits.cpu }}  
+            cpu: {{ .Values.container.resources.limits.cpu }}
+          {{ else if and (.Values.container.resources.limits.cpuLimitBoostPercent) (.Values.container.resources.requests.cpu) }}
+            cpu: {{ include "bede-application.cpuBoostLimit" . }}
+          {{- end }}
+          {{- if .Values.container.resources.limits.memory }}  
+            memory: {{ .Values.container.resources.limits.memory }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.container.probes }}
+        {{- .Values.container.probes | toYaml | nindent 8 }}
+        {{- end }}
+        ports:
+        - containerPort: {{ .Values.container.port }}
+      {{- if and (eq .Values.app.name "bede-devopsdashboard-api") (eq .Values.cache.enabled "true") }}
+      - name: {{ .Values.cache.container.name }}
+        image: {{ .Values.cache.container.image }}
+        ports:
+        - containerPort: {{ .Values.cache.container.port }}
+      {{- end }}
+      tolerations:
+      {{- if and (eq .Values.tolerateSpot "true") (eq .Values.spotEnabled "true") }}
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+      {{- end }}
+      affinity:
+        nodeAffinity:
+        {{- if and (eq .Values.tolerateSpot "true") (eq .Values.spotEnabled "true") }}
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: "kubernetes.azure.com/scalesetpriority"
+                operator: "In"
+                values:
+                - "spot"
+        {{- end }}
